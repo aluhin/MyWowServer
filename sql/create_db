@@ -1,0 +1,9 @@
+BEGIN TRANSACTION;
+
+CREATE TABLE customer(
+    id serial PRIMARY KEY NOT NULL,
+    name varchar UNIQUE NOT NULL,
+    password varchar NOT NULL
+);
+
+END TRANSACTION;
