@@ -1,10 +1,8 @@
 package com.amg.mywow.server;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Socket;
 
 import javax.net.ssl.SSLSocket;
 
@@ -43,25 +41,6 @@ public class MyWowHandler implements Runnable {
 		customerId = -1;
 	}
 
-	public void run2() {
-		try {
-			oos = new ObjectOutputStream(sslSocket.getOutputStream());
-			oos.flush();
-			ois = new ObjectInputStream(sslSocket.getInputStream());
-			
-			authenticateUser();
-			
-			while (true) {
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
 	public void run() {
 		try {
 			oos = new ObjectOutputStream(sslSocket.getOutputStream());
@@ -81,6 +60,7 @@ public class MyWowHandler implements Runnable {
 			while (true) {
 				short action = -1;
 				action = ois.readShort();
+				// TODO: think if we want to handle specific disconnection or just catch SocketException 
 				if (action == ACTION_DISCONNECT) {
 					handlerManager.getHandlersTable().remove(customerId);
 					//sslSocket.close();
@@ -101,16 +81,6 @@ public class MyWowHandler implements Runnable {
 		}
 	}
 
-	private void authenticateUser2() throws IOException {
-		String customerName = ois.readUTF();
-		String customerPassword = ois.readUTF();
-
-		isLogged = true;
-		
-		oos.writeByte(0);
-		oos.flush();
-		oos.reset();
-	}
 	private void authenticateUser() throws IOException {
 
 		String customerName = ois.readUTF();
@@ -136,6 +106,7 @@ public class MyWowHandler implements Runnable {
 				session.getTransaction().commit();
 				isConnectionPerformed = true;
 			} catch (HibernateException e) {
+				// TODO: this is wrong: createQuery(), uniqueResult() and commit() may also throw HibernateException
 				System.out.println("Retrying creating connection: " + e + " TRY: " + tries);
 			}
 		} while (!isConnectionPerformed);
@@ -157,20 +128,19 @@ public class MyWowHandler implements Runnable {
 			}
 		}
 
-		// TODO: these 2 lines must go away!!!
+		// TODO: Remove these two lines! they emulate always login situation for performance test purposes
 		isLogged = true;
 		isAlreadyLogged = false;
 
 		byte response = isLogged ? RESPONSE_0 : RESPONSE_1;
 		if (isAlreadyLogged) {
-			// TODO: The user is already logged. Should we kick out the previous one ?
+			// TODO: The user is already logged. Should we instead kick out the previous one? I don't think so, just inform the user 
 			response = RESPONSE_2;
 		}
 
 		oos.writeByte(response);
 		oos.flush();
 		oos.reset();
-		
 	}
 
 	private void distributeAction(short action) throws IOException {
