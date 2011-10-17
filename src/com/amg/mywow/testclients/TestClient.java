@@ -14,8 +14,8 @@ public class TestClient implements Runnable{
 	private static final int DEFAULT_ACTION_PORT = 4444;
 	
 	// MacOS limit number of threads ~2540
-	private static final int NUMBER_OF_CLIENTS = 2500;
-	private static final int NUMBER_OF_SENTS = 100;
+	private static final int NUMBER_OF_CLIENTS = 1;
+	private static final int NUMBER_OF_SENTS = 10000000;
 	
 	// Generic response code
 	public static final byte RESPONSE_0 = 0;
@@ -60,6 +60,8 @@ public class TestClient implements Runnable{
 				}
 			}
 			
+			System.out.println("Local port number: " + sslSocket.getLocalPort());
+			System.out.println("Remote port number: " + sslSocket.getPort());
 			//System.out.println("Just connected to " + sslSocket.getRemoteSocketAddress());
 			
 			ObjectOutputStream oos = new ObjectOutputStream(sslSocket.getOutputStream());

@@ -36,6 +36,9 @@ public class HandlerManager implements Runnable {
 				SSLSocket sslClientSocket = (SSLSocket) sslServerSocket.accept();
 				//logger.debug("Incomming accept request arrived");
 				
+				System.out.println("SERVER Local port number: " + sslClientSocket.getLocalPort());
+				System.out.println("SERVER Remote port number: " + sslClientSocket.getPort());
+				
 				MyWowHandler handler = new MyWowHandler(this, sslClientSocket);
 				new Thread(handler).start();
 				counterClients++;

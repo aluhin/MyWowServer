@@ -10,6 +10,7 @@ import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
+import com.amg.mywow.common.MovementAction;
 import com.amg.mywow.server.entities.Customer;
 
 public class MyWowHandler implements Runnable {
@@ -146,6 +147,7 @@ public class MyWowHandler implements Runnable {
 	private void distributeAction(short action) throws IOException {
 		switch (action) {
 		case ACTION_MOVE: {
+			//MovementAction movementAction = (MovementAction) ois.readObject();
 			oos.writeUTF("ACTION MOVE");
 			oos.flush();
 			oos.reset();

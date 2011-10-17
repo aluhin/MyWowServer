@@ -1,10 +1,11 @@
 package com.amg.mywow.server.entities;
 
-public class Customer {
+public class Character {
 	
 	private int id;
 	private String name;
-	private String password;
+	private int x;
+	private int y;
 	
 	public int getId() {
 		return id;
@@ -22,11 +23,19 @@ public class Customer {
 		this.name = name;
 	}
 	
-	public String getPassword() {
-		return password;
+	public int getX() {
+		return x;
 	}
-
-	public void setPassword(String password) {
-		this.password = password;
+	
+	public void setX(int x) {
+		this.x = x;
+	}
+	
+	public int getY() {
+		return y;
+	}
+	
+	public void setY(int y) {
+		this.y = y;
 	}
 }
