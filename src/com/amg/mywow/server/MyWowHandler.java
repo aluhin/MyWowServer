@@ -10,22 +10,16 @@ import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
 import org.hibernate.Session;
 
-import com.amg.mywow.common.MovementAction;
+import com.amg.mywow.common.LoginData;
+import com.amg.mywow.common.Packet;
 import com.amg.mywow.server.entities.Customer;
 
 public class MyWowHandler implements Runnable {
 
-	// Generic response code
-	public static final byte RESPONSE_0 = 0;
-	public static final byte RESPONSE_1 = 1;
-	public static final byte RESPONSE_2 = 2;
-
-	public static final short ACTION_DISCONNECT = -1;
-	public static final short ACTION_MOVE = 0;
-	public static final short ACTION_ATACK = 1;
-
 	static Logger logger = Logger.getLogger(MyWowHandler.class);
-
+	
+	static int idCount = 0;
+	
 	private HandlerManager handlerManager;
 	private SSLSocket sslSocket;
 
@@ -33,13 +27,13 @@ public class MyWowHandler implements Runnable {
 	private ObjectInputStream ois;
 
 	private boolean isLogged;
-	private int customerId;
+	private int characterId;
 
 	MyWowHandler(HandlerManager handlerManager, SSLSocket sslSocket) {
 		this.handlerManager = handlerManager;
 		this.sslSocket = sslSocket;
 		isLogged = false;
-		customerId = -1;
+		characterId = -1;
 	}
 
 	public void run() {
@@ -56,37 +50,36 @@ public class MyWowHandler implements Runnable {
 				return;
 			}
 
-			//logger.debug("Customer correctly logged in with id: " + customerId);
+			logger.debug("Customer correctly logged in with id: " + characterId);
 
 			while (true) {
-				short action = -1;
-				action = ois.readShort();
-				// TODO: think if we want to handle specific disconnection or just catch SocketException 
-				if (action == ACTION_DISCONNECT) {
-					handlerManager.getHandlersTable().remove(customerId);
-					//sslSocket.close();
+				Packet packet = receivePacket();
+				// TODO: think if we want to handle specific disconnection or just catch SocketException (check if packet.customerId is the correct one!!!)
+				if (packet == null || packet.getAction() == Packet.ACTION_DISCONNECT) {
 					//logger.debug("Client disconnected");
-					return;
+					continue;
 				}
-				//logger.debug("Handler " + Thread.currentThread().getName() + " received request with action: " + action);
+				logger.debug("Handler " + Thread.currentThread().getName() + " received packet: " + packet);
 
-				distributeAction(action);
+				distributeAction(packet);
 			}
 		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
 			if (isLogged) {
-				handlerManager.getHandlersTable().remove(customerId);
-				//logger.debug("Client disconnected");
+				synchronized (handlerManager.getHandlersTable()) {
+					handlerManager.getHandlersTable().remove(characterId);
+				}
+				logger.debug("Client disconnected");
 			}
-			else
-				e.printStackTrace();
 		}
 	}
 
 	private void authenticateUser() throws IOException {
 
-		String customerName = ois.readUTF();
-		String customerPassword = ois.readUTF();
-		//System.out.println("Received loggin parameters, user: " + customerName + " password: " + customerPassword);
+		Packet packet = receivePacket(); // TODO: check correct action
+		LoginData loginData = (LoginData) packet.getData();
+		System.out.println("Received loggin parameters, user: " + loginData.getUserName() + " password: " + loginData.getPassword());
 
 		Session session = HibernateUtil.getSessionFactory().getCurrentSession();
 
@@ -101,29 +94,32 @@ public class MyWowHandler implements Runnable {
 		
 				customer = (Customer) session
 						.createQuery("from Customer where name = ? and password = ?")
-						.setString(0, customerName).setString(1, customerPassword)
+						.setString(0, loginData.getUserName()).setString(1, loginData.getPassword())
 						.uniqueResult();
 				
 				session.getTransaction().commit();
 				isConnectionPerformed = true;
 			} catch (HibernateException e) {
-				// TODO: this is wrong: createQuery(), uniqueResult() and commit() may also throw HibernateException
+				// TODO: this is wrong: createQuery(), uniqueResult() and commit() may also throw HibernateException and we cannot retry --> create specific retry catch for .beginTransaction()
 				System.out.println("Retrying creating connection: " + e + " TRY: " + tries);
 			}
 		} while (!isConnectionPerformed);
 		
 		boolean isAlreadyLogged = false;
 		if (customer != null) {
-			customerId = customer.getId();
+			characterId = customer.getId();
 
-			// We synchronize here in case two same users try to enter at the same time
-			synchronized (handlerManager) {
-				if (handlerManager.getHandlersTable().containsKey(customerId)) {
+			// We synchronize here in case two handlers try to add themselves at the same time
+			synchronized (handlerManager.getHandlersTable()) {
+				// TODO: Remove this line! they emulate always login situation for performance test purposes
+				characterId += idCount++ - 1;
+				
+				if (handlerManager.getHandlersTable().containsKey(characterId)) {
 					isAlreadyLogged = true;				
 					//logger.debug("User tried to log in when already logged in");
 				}
 				else {
-					handlerManager.getHandlersTable().put(customerId, this);
+					handlerManager.getHandlersTable().put(characterId, this);
 					isLogged = true;
 				}
 			}
@@ -133,27 +129,31 @@ public class MyWowHandler implements Runnable {
 		isLogged = true;
 		isAlreadyLogged = false;
 
-		byte response = isLogged ? RESPONSE_0 : RESPONSE_1;
+		byte response = isLogged ? Packet.RESPONSE_LOGIN_OK : Packet.RESPONSE_LOGIN_INCORRECT;
 		if (isAlreadyLogged) {
 			// TODO: The user is already logged. Should we instead kick out the previous one? I don't think so, just inform the user 
-			response = RESPONSE_2;
+			response = Packet.RESPONSE_LOGIN_ALREADY;
 		}
 
-		oos.writeByte(response);
-		oos.flush();
-		oos.reset();
+		sendPacket(new Packet(Packet.ACTION_LOGIN, response, characterId));
 	}
 
-	private void distributeAction(short action) throws IOException {
-		switch (action) {
-		case ACTION_MOVE: {
-			//MovementAction movementAction = (MovementAction) ois.readObject();
-			oos.writeUTF("ACTION MOVE");
-			oos.flush();
-			oos.reset();
+	private void distributeAction(Packet packet) throws IOException {
+		if (packet.getCharacterId() != characterId) {
+			System.out.println("Packet discarded due to different characters Id. Should be " + characterId + " Packet: " + packet);
+		}
+			
+		switch (packet.getAction()) {
+		case Packet.ACTION_MOVEMENT: {
+			
+			// Check validity of the movement
+			sendPacket(new Packet(Packet.ACTION_MOVEMENT_CONFIRMATION, Packet.RESPONSE_GENERIC_OK, characterId));
+			synchronized (handlerManager.getActionsToDistribute()) {
+				handlerManager.getActionsToDistribute().add(packet);
+			}
 			break;
 		}
-		case ACTION_ATACK: {
+		case Packet.ACTION_ATTACK: {
 			oos.writeUTF("ACTION ATACK");
 			oos.flush();
 			oos.reset();
@@ -166,5 +166,42 @@ public class MyWowHandler implements Runnable {
 			break;
 		}
 		}
+	}
+	
+	public synchronized void sendPacket(Packet packet) {
+		try {
+			oos.writeObject(packet);
+			oos.flush();
+			oos.reset();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private Packet sendAndReceivePacket(Packet packet) {
+		sendPacket(packet);
+		Packet returnPacket = null;
+
+		try {
+			returnPacket = (Packet) ois.readObject();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		return returnPacket;
+	}
+	
+	private Packet receivePacket() {
+		Packet returnPacket = null;
+
+		try {
+			returnPacket = (Packet) ois.readObject();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
+		return returnPacket;
 	}
 }

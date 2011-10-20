@@ -1,26 +1,34 @@
 package com.amg.mywow.common;
 
-public class MovementAction {
+import java.io.Serializable;
+
+public class MovementAction implements Serializable {
 	
-	private int characterId;
-	private Position[] movements;
+	private static final long serialVersionUID = 1L;
+
+	private Position[] positions;
 	
 	public MovementAction() {
 	}
 	
-	public int getCharacterId() {
-		return characterId;
+	public MovementAction (Position[] positions) {
+		this.positions = positions;
 	}
 	
-	private void setCharacterId(int characterId) {
-		this.characterId = characterId;
+	public Position[] getPositions() {
+		return positions;
 	}
 	
-	public Position[] getMovements() {
-		return movements;
+	public void setPositions(Position[] positions) {
+		this.positions = positions;
 	}
 	
-	public void setMovements(Position[] movements) {
-		this.movements = movements;
+	public String toString() {
+		StringBuilder stringBuilder = new StringBuilder("Coords: ");
+		for (Position pos : positions) {
+			stringBuilder.append(pos);
+			stringBuilder.append(" ");
+		}
+		return stringBuilder.toString();
 	}
 }

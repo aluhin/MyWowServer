@@ -1,13 +1,17 @@
 package com.amg.mywow.server;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
 
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 
 import org.apache.log4j.Logger;
+
+import com.amg.mywow.common.Packet;
 
 public class HandlerManager implements Runnable {
 
@@ -16,13 +20,17 @@ public class HandlerManager implements Runnable {
 	private int actionPort;
 
 	private Hashtable<Integer, MyWowHandler> handlersTable;
+	private List<Packet> actionsToDistribute;
 	
 	HandlerManager(int actionPort) {
 		this.actionPort = actionPort;
 		handlersTable = new Hashtable<Integer, MyWowHandler>();
+		actionsToDistribute = new ArrayList<Packet>();
 	}
 
 	public void run() {
+		
+		new Thread(new ActionDistributor(this)).start();
 		
 		try {
 			SSLServerSocketFactory sslSocketFactory = (SSLServerSocketFactory)SSLServerSocketFactory.getDefault();
@@ -35,9 +43,6 @@ public class HandlerManager implements Runnable {
 				//logger.debug("Listening incomming binding requests");
 				SSLSocket sslClientSocket = (SSLSocket) sslServerSocket.accept();
 				//logger.debug("Incomming accept request arrived");
-				
-				System.out.println("SERVER Local port number: " + sslClientSocket.getLocalPort());
-				System.out.println("SERVER Remote port number: " + sslClientSocket.getPort());
 				
 				MyWowHandler handler = new MyWowHandler(this, sslClientSocket);
 				new Thread(handler).start();
@@ -54,5 +59,12 @@ public class HandlerManager implements Runnable {
 	public Hashtable<Integer, MyWowHandler> getHandlersTable() {
 		return handlersTable;
 	}
-
+	
+	public synchronized List<Packet> getActionsToDistribute() {
+		return actionsToDistribute;
+	}
+	
+	public synchronized void setActionsToDistribute(List<Packet> actionsToDistribute) {
+		this.actionsToDistribute = actionsToDistribute;
+	}
 }
