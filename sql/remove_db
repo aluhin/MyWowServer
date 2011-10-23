@@ -1,6 +1,6 @@
 BEGIN TRANSACTION;
 
 DROP TABLE customer;
-DROP character;
+DROP TABLE character;
 
 END TRANSACTION;

@@ -13,6 +13,7 @@ public class Packet implements Externalizable{
 	static public final short ACTION_ATTACK = 2;
 	static public final short ACTION_ATTACK_CONFIRMATION = 3;
 	static public final short ACTION_LOGIN = 4;
+	static public final short ACTION_CHAR_LOCATION = 5;
 	
 	static public final byte RESPONSE_GENERIC_OK = 0;
 	static public final byte RESPONSE_GENERIC_NOTOK = 1;

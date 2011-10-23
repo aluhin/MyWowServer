@@ -2,7 +2,7 @@ BEGIN TRANSACTION;
 
 CREATE TABLE customer(
     id serial PRIMARY KEY NOT NULL,
-    name varchar UNIQUE NOT NULL,
+    name varchar NOT NULL,  -- This should be UNIQUE, it was removed for testing
     password varchar NOT NULL
 );
 

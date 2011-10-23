@@ -12,7 +12,10 @@ import org.hibernate.Session;
 
 import com.amg.mywow.common.LoginData;
 import com.amg.mywow.common.Packet;
+import com.amg.mywow.common.Position;
 import com.amg.mywow.server.entities.Customer;
+import com.amg.mywow.server.entities.Character;
+
 
 public class MyWowHandler implements Runnable {
 
@@ -28,6 +31,7 @@ public class MyWowHandler implements Runnable {
 
 	private boolean isLogged;
 	private int characterId;
+	private Position characterPosition;
 
 	MyWowHandler(HandlerManager handlerManager, SSLSocket sslSocket) {
 		this.handlerManager = handlerManager;
@@ -95,7 +99,8 @@ public class MyWowHandler implements Runnable {
 				customer = (Customer) session
 						.createQuery("from Customer where name = ? and password = ?")
 						.setString(0, loginData.getUserName()).setString(1, loginData.getPassword())
-						.uniqueResult();
+						//.uniqueResult(); //TODO: Should be this, due to the name is unique. Changed for testing
+						.list().get(0);
 				
 				session.getTransaction().commit();
 				isConnectionPerformed = true;
@@ -112,7 +117,7 @@ public class MyWowHandler implements Runnable {
 			// We synchronize here in case two handlers try to add themselves at the same time
 			synchronized (handlerManager.getHandlersTable()) {
 				// TODO: Remove this line! they emulate always login situation for performance test purposes
-				characterId += idCount++ - 1;
+				characterId += idCount++;
 				
 				if (handlerManager.getHandlersTable().containsKey(characterId)) {
 					isAlreadyLogged = true;				
@@ -144,6 +149,28 @@ public class MyWowHandler implements Runnable {
 		}
 			
 		switch (packet.getAction()) {
+		case Packet.ACTION_CHAR_LOCATION: {
+			
+			Session session = HibernateUtil.getSessionFactory().getCurrentSession();
+			Character character = null;
+			boolean isConnectionPerformed = false;
+			do {
+				try {
+					session.beginTransaction();
+					character = (Character) session.get(Character.class, characterId);
+					session.getTransaction().commit();
+					isConnectionPerformed = true;
+				} catch (HibernateException e) {
+					System.out.println("Retrying creating connection: " + e);
+				}
+			} while (!isConnectionPerformed);
+			
+			synchronized (handlerManager.getActionsToDistribute()) {
+				characterPosition = new Position(character.getX(), character.getY());
+				handlerManager.getActionsToDistribute().add(new Packet(Packet.ACTION_CHAR_LOCATION, characterPosition, characterId));
+			}
+			break;
+		}
 		case Packet.ACTION_MOVEMENT: {
 			
 			// Check validity of the movement
@@ -203,5 +230,21 @@ public class MyWowHandler implements Runnable {
 			e.printStackTrace();
 		}
 		return returnPacket;
+	}
+
+	public int getCharacterId() {
+		return characterId;
+	}
+
+	public void setCharacterId(int characterId) {
+		this.characterId = characterId;
+	}
+
+	public Position getCharacterPosition() {
+		return characterPosition;
+	}
+
+	public void setCharacterPosition(Position characterPosition) {
+		this.characterPosition = characterPosition;
 	}
 }
