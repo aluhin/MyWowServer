@@ -1,6 +1,8 @@
 package com.amg.mywow.server;
 
 import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -33,18 +35,16 @@ public class HandlerManager implements Runnable {
 		new Thread(new ActionDistributor(this)).start();
 		
 		try {
-			SSLServerSocketFactory sslSocketFactory = (SSLServerSocketFactory)SSLServerSocketFactory.getDefault();
-			SSLServerSocket sslServerSocket = (SSLServerSocket)sslSocketFactory.createServerSocket(actionPort);
-			sslServerSocket.setEnabledCipherSuites(new String[]{"SSL_RSA_WITH_RC4_128_MD5"});
+			ServerSocket serverSocket = new ServerSocket(actionPort);
 			
 			int counterClients = 0;
 			
 			while (true) {
 				//logger.debug("Listening incomming binding requests");
-				SSLSocket sslClientSocket = (SSLSocket) sslServerSocket.accept();
+				Socket clientSocket = serverSocket.accept();
 				//logger.debug("Incomming accept request arrived");
 				
-				MyWowHandler handler = new MyWowHandler(this, sslClientSocket);
+				MyWowHandler handler = new MyWowHandler(this, clientSocket);
 				new Thread(handler).start();
 				counterClients++;
 				System.out.println(counterClients);

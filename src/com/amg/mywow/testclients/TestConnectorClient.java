@@ -12,8 +12,8 @@ import com.amg.mywow.common.Position;
 public class TestConnectorClient extends ConnectorClient {
 	
 	// Used for testing purposed only
-	private static final int NUMBER_OF_CLIENTS = 100;
-	private static final int NUMBER_OF_SENTS = 100;
+	private static final int NUMBER_OF_CLIENTS = 10;
+	private static final int NUMBER_OF_SENTS = 10;
 	private static final int MAX_SLEEP_BETWEEN_ACTIONS = 500;
 	//private static final int MAX_SLEEP_BETWEEN_ACTIONS = 10;
 	private int numberOfMovementsReceived;
@@ -38,6 +38,7 @@ public class TestConnectorClient extends ConnectorClient {
 	public static void main(String[] args) throws InterruptedException {
 		TestConnectorClient[] clients = new TestConnectorClient[NUMBER_OF_CLIENTS];
 		for (int i = 0; i < NUMBER_OF_CLIENTS; i++)
+			//clients[i] = new TestConnectorClient("abiamielpedro.no-ip.org", 4444);
 			clients[i] = new TestConnectorClient("localhost", 4444);
 		for (int i = 0; i < NUMBER_OF_CLIENTS; i++)
 			clients[i].connect();

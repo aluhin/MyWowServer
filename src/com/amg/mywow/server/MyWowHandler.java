@@ -3,8 +3,7 @@ package com.amg.mywow.server;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-
-import javax.net.ssl.SSLSocket;
+import java.net.Socket;
 
 import org.apache.log4j.Logger;
 import org.hibernate.HibernateException;
@@ -24,7 +23,7 @@ public class MyWowHandler implements Runnable {
 	static int idCount = 0;
 	
 	private HandlerManager handlerManager;
-	private SSLSocket sslSocket;
+	private Socket socket;
 
 	private ObjectOutputStream oos;
 	private ObjectInputStream ois;
@@ -33,18 +32,18 @@ public class MyWowHandler implements Runnable {
 	private int characterId;
 	private Position characterPosition;
 
-	MyWowHandler(HandlerManager handlerManager, SSLSocket sslSocket) {
+	MyWowHandler(HandlerManager handlerManager, Socket socket) {
 		this.handlerManager = handlerManager;
-		this.sslSocket = sslSocket;
+		this.socket = socket;
 		isLogged = false;
 		characterId = -1;
 	}
 
 	public void run() {
 		try {
-			oos = new ObjectOutputStream(sslSocket.getOutputStream());
+			oos = new ObjectOutputStream(socket.getOutputStream());
 			oos.flush();
-			ois = new ObjectInputStream(sslSocket.getInputStream());
+			ois = new ObjectInputStream(socket.getInputStream());
 
 			authenticateUser();
 

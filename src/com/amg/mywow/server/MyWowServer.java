@@ -28,9 +28,6 @@ public class MyWowServer {
 	
 	public static void main(String[] args) {
 		
-		System.setProperty("javax.net.ssl.keyStore", "mySrvKeystore");
-		System.setProperty("javax.net.ssl.keyStorePassword","micuenta");
-		
 		int actionPort = DEFAULT_ACTION_PORT;
 		
 		if (args.length > 0) {
