@@ -86,7 +86,7 @@ public class TestConnectorClient extends ConnectorClient {
 					objectLock.notify();
 				}
 			}
-			else { //TODO: Should we check the case !isResponseRequested && packet.getCharacterId() != characterId ? it should never happen
+			else { //TODO: Should we check the case !isResponseRequested && packet.getCharacterId() == characterId ? it should never happen
 				enemies.put(packet.getCharacterId(), (Position)packet.getData());
 			}
 			break;
