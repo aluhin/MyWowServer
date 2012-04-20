@@ -34,7 +34,7 @@ public class Position implements Serializable{
 	}
 	
 	public String toString() {
-		return String.format("[%s,%s]", x, y);
+		return String.format("[%s,%s]", y, x);
 	}
 	
 	public final float distance(Position other) {
